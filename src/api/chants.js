@@ -30,6 +30,15 @@ export async function updateChantParoles(id, paroles) {
   return data
 }
 
+/**
+ * Restaure d'anciennes paroles. La version actuelle est archivée côté serveur
+ * avant d'être remplacée : une restauration est toujours réversible.
+ */
+export async function restaurerVersion(chantId, versionId) {
+  const { data } = await http.post(`/chants/${chantId}/versions/${versionId}/restaurer`)
+  return data
+}
+
 export async function fetchPupitres() {
   const { data } = await http.get('/pupitres')
   return data

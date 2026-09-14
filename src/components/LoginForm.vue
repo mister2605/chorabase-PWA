@@ -16,10 +16,20 @@ async function soumettre() {
     const utilisateur = await login(email.value, password.value)
     emit('connecte', utilisateur)
   } catch (e) {
-    erreur.value =
-      e.response?.status === 422
-        ? 'Email ou mot de passe incorrect.'
-        : "Impossible de se connecter pour le moment."
+    // Pas de reponse du tout = la requete n'est jamais arrivee. Ce n'est pas
+    // un probleme de mot de passe, et le dire evite qu'un choriste s'acharne
+    // sur ses identifiants alors que c'est le lien qui est perime.
+    if (! e.response) {
+      erreur.value =
+        "Le serveur ne répond pas. Vérifie ta connexion internet — " +
+        'et si ça persiste, demande le lien à jour au maître de chœur.'
+    } else if (e.response.status === 429) {
+      erreur.value = 'Trop de tentatives. Attends une minute avant de réessayer.'
+    } else {
+      // Message du serveur : il distingue un mot de passe faux d'un compte
+      // pas encore active, ce qu'un texte fige ne peut pas faire.
+      erreur.value = e.response.data?.message || 'Impossible de se connecter pour le moment.'
+    }
   } finally {
     enCours.value = false
   }
@@ -29,7 +39,7 @@ async function soumettre() {
 <template>
   <div class="page">
     <div class="carte">
-      <p class="souslabel">Chorale NDPS · Ouaga 2000</p>
+      <p class="souslabel">Répertoire de chorale</p>
       <h1 class="titre">Chorabase</h1>
 
       <form @submit.prevent="soumettre">
@@ -46,6 +56,17 @@ async function soumettre() {
           {{ enCours ? 'Connexion...' : 'Se connecter' }}
         </button>
       </form>
+
+      <!--
+        Sans cette mention, l'ecran de connexion est une impasse muette pour
+        quelqu'un qui n'a pas encore de compte : il tape son email, echoue,
+        recommence, et abandonne. On ne met PAS de lien d'inscription ici —
+        l'acces a la chorale passe par le lien d'adhesion, qui est le secret.
+      -->
+      <p class="mention">
+        Pas encore de compte ? Demande le lien d'inscription au maître de chœur :
+        l'accès à la chorale se fait uniquement par ce lien.
+      </p>
     </div>
   </div>
 </template>
@@ -116,5 +137,13 @@ button {
 button:disabled {
   opacity: 0.6;
   cursor: default;
+}
+.mention {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #8a7d5e;
+  margin: 18px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid #eae2c8;
 }
 </style>
